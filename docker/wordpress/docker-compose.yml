@@ -1,0 +1,50 @@
+# docker-compose.yml — WordPress + MySQL starter stack
+#
+# Usage:
+#   1. Create a .env file next to this file with:
+#        DB_PASSWORD=<redacted>
+#        DB_ROOT_PASSWORD=<redacted>
+#   2. docker compose up -d
+#   3. Open http://localhost:8080 and finish the WordPress setup.
+#   4. docker compose down        # stop
+#      docker compose down -v     # stop AND delete all data
+#
+# Notes:
+#   - Data persists in the named volumes db_data and wp_data.
+#   - Both services restart automatically unless you stop them.
+#   - Secrets come from .env (never commit .env to git).
+
+services:
+  # db: the MySQL database that stores all WordPress content
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      # Named volume: database files survive container restarts/removal.
+      - db_data:/var/lib/mysql
+
+  # wordpress: the web app (Apache + PHP), served on port 8080
+  wordpress:
+    image: wordpress:6-apache
+    restart: unless-stopped
+    depends_on:
+      - db # start the database before WordPress
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306 # 'db' resolves to the MySQL container
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Named volume: uploaded themes, plugins and media persist.
+      - wp_data:/var/www/html
+
+volumes:
+  db_data:
+  wp_data:
